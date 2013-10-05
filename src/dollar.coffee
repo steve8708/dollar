@@ -1,48 +1,8 @@
-###
-  Dollar.coffee (alpha)
-
-  The most bang for your buck!
-
-  TODO:
-    Accuracy: double check which methods should apply to first element
-      or loop through all elements
-
-    on remove() call off() on all children
-
-    $.event.add
-    $.event.remove
-
-    $.data
-
-    mouseenter, mouseleave
-    removeData() when element removed from DOM
-
-    swap out for other sites and verify works
-      maybe automate this like a test suite
-
-    touch events
-      e.touches
-      https://github.com/charsleysa/zepto/commit/
-        38b58692337097fb8b7d1cc2a65dc759604cb8c
-
-    fixEvent - took out, needs to be put back
-
-    gestures (ala zepto)
-
-    support ie 8?
-      jqlite does pretty simply:
-        https://github.com/angular/angular.js/blob/master/src/jqLite.js
-
-    default and custom animation speeds -> $.fx.speeds.slow = 200
-
-    ie event currentTarget
-    mouseout, mouseleave
-    position
-
-    - - - > Unit tests
-
-    - - - > Custom builds (no ajax, no deferred, etc)
-###
+# Dollar.coffee (alpha)
+#
+# The most bang for your buck!
+#
+# Work in progress...
 
 # Setup - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -488,12 +448,12 @@ _extend = (target, source, deep) ->
 # Global methods - - - - - - - - - - - - - - - - - - - - - -
 
 # unique id counter
-u = 0
+uid = 0
 
 $.isPlainObject = (obj) -> "#{obj}" is '[object Object]'
 $.capitalize = (string) -> string[0].toUpperCase() + string.substring(1)
 $.dasherize = (string) -> string.replace /([a-z])([A-Z])/, '$1-$2'
-$.uniqueId = (namespace) -> if namespace then "#{namespace}#{u++}" else u++
+$.uniqueId = (namespace) -> if namespace then "#{namespace}#{uid++}" else uid++
 $.noConflict = -> window.$ = original$ ; $
 $.isArray = (obj) -> Array.isArray obj
 $.isStringLike = isStringLike
@@ -503,7 +463,7 @@ $.data = (element, key, value) ->
   unless value
     expandoData[element[expando]]
   else
-    element[expando] ?= _.uniqueId()
+    element[expando] ?= $.uniqueId()
     id = element[expando]
     expandoData[id] ?= {}
     expandoData[id][key] = value
@@ -1068,11 +1028,6 @@ $.alias(
   ['off', 'unbind', 'undelegate', 'die'],
   ['on', 'bind', 'delegate', 'live']
 )
-
-# for key, value of _
-#   $[key] = value unless $[key]
-#   $.fn[key] = value unless $.fn[key]
-
 
 
 # Debug - - - - - - - - - - - - - - - - - - - - - - - - - -
