@@ -7,12 +7,15 @@
     Accuracy: double check which methods should apply to first element
       or loop through all elements
 
-    closest()
-    off()
     on remove() call off() on all children
 
     $.event.add
     $.event.remove
+
+    $.data
+
+    mouseenter, mouseleave
+    removeData() when element removed from DOM
 
     swap out for other sites and verify works
       maybe automate this like a test suite
@@ -26,6 +29,10 @@
 
     gestures (ala zepto)
 
+    support ie 8?
+      jqlite does pretty simply:
+        https://github.com/angular/angular.js/blob/master/src/jqLite.js
+
     default and custom animation speeds -> $.fx.speeds.slow = 200
 
     ie event currentTarget
@@ -33,6 +40,8 @@
     position
 
     - - - > Unit tests
+
+    - - - > Custom builds (no ajax, no deferred, etc)
 ###
 
 # Setup - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -49,6 +58,9 @@ original$ = window.$
 
 $ = (selector, context) ->
   new $.fn.init selector, context
+
+expando = $.expando = 'dollar-' + Date.now()
+expandoData = {}
 
 $.fn = $:: =
   constructor: $
@@ -169,14 +181,31 @@ $.fn = $:: =
 
   # FIXME: support namespaces
   # FIXME: support ms opposite of attachevent
-  off: (args...) ->
+  off: (events, selector, handler) ->
     # FIXME: support off() off(fn) off(namespace) off (eventName)
     for el in @
-      if el.removeEventListener
-        el.removeEventListener.apply el, args if el and args[0] and args[1]
-      else if el.detachEvent
-        # FIXME: support
-        el.detachEvent.apply el, args
+      callbacks = $.data(el, 'eventCallbacks') or []
+      if not events
+        for handler in callbacks
+          el.removeEventListener handler.eventName, handler.callback
+        return
+      if typeof events is 'function'
+        for handler in callbacks
+          if handler.callback is handler
+            el.removeEventListener handler.eventName, handler.callback
+      for event in events.split /\s+/
+        split = event.split('.')
+        namespace = split[1]
+        event = split[0]
+
+        for handler in callbacks
+          eventMatch =  not event or handler.eventName is event
+          namespaceMatch = not namespace or handler.namespace is namespace
+          handlerMatch = not handler or handler.callback is handler
+          selectorMatch = not selector or handler.selector is selector
+
+          if namespaceMatch and handlerMatch and selectorMatch and eventMatch
+            el.removeEventListener handler.eventName, handler.callback
     @
 
   # FIXME: doesn't add each
@@ -300,8 +329,12 @@ $.fn = $:: =
     res
 
   data: (name, value) ->
-    if value then @attr "data-#{name}", value
-    else el.data and el.data[name]
+    if value
+      for el in @
+        $.data el, name, value
+    else
+      el = @[0]
+      if not el undefined else $.data el, name
 
   on:  (event, args...) ->
     fn = args.pop()
@@ -322,7 +355,6 @@ $.fn = $:: =
             cb.apply @, [e].concat args
 
       callbackProxy = (e) =>
-        e ?= window.event
         res = callback $.Event e
         if res is false
           e.stopPropagation()
@@ -331,24 +363,24 @@ $.fn = $:: =
 
       addEvent = (el) =>
         return if not el
-
-        # FIXME: maybe use el._data for internal data
-        el.data ?= {}
-        el.data.callbacks ?= []
-        el.data.callbacks.push
-
-        # FIXME: add el.data.callbacks
-        id = el._$id ?= $.uniqueId '_$id'
-        handlers = eventHandlers[id] ?= []
         split = event.split '.'
         eventName = split[0]
         namespace = split[1]
-        # TODO: store and manage callbacks, namespaces
+
+        # FIXME: move to $.data
+        callbacks = $.data el, 'eventCallbacks'
+        if not callbacks
+          callbacks = []
+          $.data 'eventCallbacks', callbacks
+
+        callbacks.push
+          selector: selector
+          callback: callback
+          namespace: namespace
+          eventName: eventName
 
         if el.addEventListener
           el.addEventListener eventName, callbackProxy, false
-        else if el.attachEvent
-          el.attachEvent "on#{eventName}", callbackProxy
 
       addEvent el for el in @
 
@@ -398,9 +430,9 @@ $.fn = $:: =
           css["#{prefix}#{propName}"] = propVals[index]
 
         # Support for { translateZ: '10px' }, etc ala zepto
-        css["#{vendor}transition"] ?= ''
+        css["#{prefix}transition"] ?= ''
         for value, key of properties
-          css["#{vendor}transition"] += ' #{key}(#{value})' if \
+          css["#{prefix}transition"] += ' #{key}(#{value})' if \
             ///^((translate|rotate|scale)(X|Y|Z|3d)?|matrix(3d)?
               |perspective|skew(X|Y)?)$///i.test(key)
 
@@ -465,6 +497,16 @@ $.uniqueId = (namespace) -> if namespace then "#{namespace}#{u++}" else u++
 $.noConflict = -> window.$ = original$ ; $
 $.isArray = (obj) -> Array.isArray obj
 $.isStringLike = isStringLike
+
+$.data = (element, key, value) ->
+  return if not element
+  unless value
+    expandoData[element[expando]]
+  else
+    element[expando] ?= _.uniqueId()
+    id = element[expando]
+    expandoData[id] ?= {}
+    expandoData[id][key] = value
 
 $.contains = (parent, contained) ->
   parent isnt contained and parent.contains contained
@@ -665,6 +707,7 @@ $.when = (defereds...) ->
 
 # Event - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+# FIXME: use angular jqlite event modification instead?
 class $.Event
   constructor: (type, props = {}) ->
     return type if type instanceof $.Event
@@ -785,6 +828,9 @@ $.ajaxSettings =
       new XDomainRequest
     else
       new XMLHttpRequest
+
+$.ajaxSetup = (options) ->
+  $.extend $.ajaxSettings, options
 
 if 'withCredentials' not of new XMLHttpRequest()
   $.ajaxSettings.xhr = (o) ->
@@ -1032,11 +1078,13 @@ $.alias(
 # Debug - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 $.support = {}
+# TODO
 $.event =
   add: ->
   remove: ->
 
-window.jQuery = $
+# For debugging
+# window.jQuery = $
 
 # Export - - - - - - - - - - - - - - - - - - - - - - - - -
 

@@ -1,9 +1,0 @@
-{
-	"folders":
-	[
-		{
-			"path": "/Users/steve/Projects/pict/hotspot-embed",
-      "folder_exclude_patterns": ["node_modules", "project"]
-		}
-	]
-}

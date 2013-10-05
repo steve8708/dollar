@@ -24,15 +24,7 @@ module.exports = (grunt) ->
     coffee:
       compile:
         files:
-          'build/output.js': [
-            'src/coffee/underline.coffee'
-            'src/coffee/dollar.coffee'
-            'src/coffee/base.coffee'
-            'src/coffee/main.coffee'
-          ]
-          '../web-app/client/libs/jquery.js': [
-            'src/coffee/dollar.coffee'
-          ]
+          'build/dollar.js': ['src/dollar.coffee' ]
 
     coffeelint:
       src: ['src/coffee/**/*.coffee', 'GruntFile.coffee']
@@ -41,24 +33,7 @@ module.exports = (grunt) ->
         camel_case_classes:
           level: 'ignore'
 
-    jade:
-      main:
-        files:
-          'build/index.html': 'index.jade'
-
-    stylus:
-      compile:
-        files:
-          'build/output.css': ['src/stylus/main.styl']
-
     watch:
-      jade:
-        files: ['**/*.jade']
-        tasks: ['jade']
-      stylus:
-        files: ['src/stylus/**/*.styl']
-        tasks: ['stylus', 'refresh']
-
       lint:
         files: ['GruntFile.coffee', 'grunt-tasks/**/*.coffee']
         tasks: ['coffeelint']
@@ -70,25 +45,20 @@ module.exports = (grunt) ->
     uglify:
       main:
         files:
-          'build/output.js': ['build/output.js']
-
-    cssmin:
-      main:
-        files: 'build/output.css': ['build/output.css']
+          'build/dollar.min.js': ['build/dollar.js']
 
     refresh:
       chrome:
         # Only refresh active tab if in url
         urlContains: ['localhost', ':50']
         # Add your computer's username here to activate auto refresh
-        users: ['steve', 'caleb']
+        users: ['steve']
 
 
   # Task Groups - - - - - - - - - - - - - - - - - - - - - -
 
   # build
-  grunt.registerTask 'build', ['coffeelint', 'stylus', 'coffee']
-  grunt.registerTask 'build-release', ['build', 'uglify', 'cssmin']
+  grunt.registerTask 'build', ['coffeelint', 'stylus', 'coffee', 'uglify']
 
   # 'ws' is for watch + serve
   grunt.registerTask 'ws', ['connect', 'watch']
